@@ -1,0 +1,390 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================
+                        DESIGN TOKENS
+========================================================== */
+
+:root {
+  /* ----------------------------------------------------------
+                        COLORS
+  ---------------------------------------------------------- */
+
+  --bg: #fbf8f2;
+
+  --surface: #ffffff;
+
+  --surface-soft: #faf5f8;
+
+  --primary: #66023c;
+
+  --primary-dark: #52022f;
+
+  --primary-light: #f7e9ef;
+
+  --hover: #5a0234;
+
+  --text: #1f1535;
+
+  --text-primary: #1f1535;
+
+  --text-secondary: #6b6570;
+
+  --text-light: #77717b;
+
+  --muted: #e0e0e0;
+
+  --border: #e8e2e6;
+
+  --accent: #ff6b6b;
+
+  /* ----------------------------------------------------------
+                        STATUS COLORS
+  ---------------------------------------------------------- */
+
+  --success: #16a34a;
+
+  --warning: #f59e0b;
+
+  --danger: #dc2626;
+
+  --info: #2563eb;
+
+  /* ----------------------------------------------------------
+                        TYPOGRAPHY
+  ---------------------------------------------------------- */
+
+  --font-primary: "Manrope", sans-serif;
+
+  /* ----------------------------------------------------------
+                        RADIUS
+  ---------------------------------------------------------- */
+
+  --radius-sm: 8px;
+
+  --radius: 12px;
+
+  --radius-lg: 16px;
+
+  --radius-xl: 20px;
+
+  /* ----------------------------------------------------------
+                        SHADOWS
+  ---------------------------------------------------------- */
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  --shadow: 0 5px 20px rgba(0, 0, 0, 0.07);
+
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
+
+  /* ----------------------------------------------------------
+                        LAYOUT
+  ---------------------------------------------------------- */
+
+  --admin-sidebar-width: 250px;
+
+  --content-max-width: 1440px;
+}
+
+/* ==========================================================
+                        GLOBAL RESET
+========================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+
+  font-size: 16px;
+
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+
+  min-width: 320px;
+
+  font-family: var(--font-primary);
+
+  font-weight: 400;
+
+  background: var(--bg);
+
+  color: var(--text);
+
+  overflow-x: hidden;
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+
+  -webkit-font-smoothing: antialiased;
+
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==========================================================
+                        ROOT
+========================================================== */
+
+#root {
+  min-height: 100vh;
+}
+
+/* ==========================================================
+                        TYPOGRAPHY
+========================================================== */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin-top: 0;
+
+  color: var(--text);
+
+  font-family: var(--font-primary);
+
+  line-height: 1.25;
+}
+
+p {
+  line-height: 1.6;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+a {
+  color: inherit;
+
+  text-decoration: none;
+}
+
+/* ==========================================================
+                        FORM ELEMENTS
+========================================================== */
+
+input,
+textarea,
+select {
+  color: var(--text);
+
+  background: var(--surface);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-light);
+
+  opacity: 1;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--primary);
+
+  outline-offset: 2px;
+}
+
+/* ==========================================================
+                        IMAGES
+========================================================== */
+
+img {
+  display: block;
+
+  max-width: 100%;
+}
+
+/* ==========================================================
+                        SCROLLBAR
+========================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c9c2c7;
+
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #aaa1a7;
+}
+
+/* ==========================================================
+                        ANIMATIONS
+========================================================== */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes blob {
+  0%,
+  100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+
+  50% {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ==========================================================
+                        UTILITY CLASSES
+========================================================== */
+
+.fade-up {
+  animation: fadeUp 0.5s ease both;
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease both;
+}
+
+.blob {
+  position: fixed;
+
+  border-radius: 50%;
+
+  filter: blur(80px);
+
+  opacity: 0.08;
+
+  pointer-events: none;
+
+  z-index: 0;
+
+  animation: blob 12s ease-in-out infinite;
+}
+
+/* ==========================================================
+                        DARK MODE FOUNDATION
+========================================================== */
+
+[data-theme="dark"] {
+  --bg: #120b10;
+
+  --surface: #1d151a;
+
+  --surface-soft: #241a20;
+
+  --text: #f8f4f6;
+
+  --text-primary: #f8f4f6;
+
+  --text-secondary: #c8bec4;
+
+  --text-light: #a99da5;
+
+  --border: #392c33;
+}
+
+[data-theme="dark"] .blob {
+  opacity: 0.05;
+}
+
+/* ==========================================================
+                        RESPONSIVE
+========================================================== */
+
+@media (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+
+    animation-iteration-count: 1 !important;
+
+    transition-duration: 0.01ms !important;
+  }
+}
