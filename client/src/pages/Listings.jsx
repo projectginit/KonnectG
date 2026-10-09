@@ -8,7 +8,7 @@ import {
   SlidersHorizontal,
   Star,
   X,
-//   ShieldCheck,
+  //   ShieldCheck,
   BadgeCheck,
   Building2,
   Eye,
@@ -20,6 +20,7 @@ import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import apiRequest from "../services/api";
 import { CATEGORIES } from "../data/categories";
+import SEO from "../components/SEO";
 
 /* ==========================================================
    FILTERS
@@ -1274,7 +1275,11 @@ export default function Listings() {
           )}
         </section>
       </main>
-
+      <SEO
+        title="KonnectG | Discover Local Businesses & Services"
+        description="Discover trusted local businesses, services, offers, and community providers near you with KonnectG."
+        path="/listings"
+      />
       <Footer />
 
       {/* ======================================================

@@ -12,6 +12,7 @@ import "leaflet/dist/leaflet.css";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import apiRequest from "../services/api.js";
+import SEO from "../components/SEO";
 
 const LOCATIONS = ["Matigara", "Medical", "Shivamandir"];
 
@@ -338,9 +339,9 @@ export default function MapPage() {
               </h2>
 
               <p className="mt-1 text-sm leading-6 text-amber-800">
-                The businesses in {selectedLocation} don&apos;t currently have usable
-                map coordinates. They can still be discovered from the listings
-                page.
+                The businesses in {selectedLocation} don&apos;t currently have
+                usable map coordinates. They can still be discovered from the
+                listings page.
               </p>
 
               <Link
@@ -376,7 +377,11 @@ export default function MapPage() {
           </div>
         </section>
       </main>
-
+      <SEO
+        title="KonnectG | Discover Local Businesses & Services"
+        description="Discover trusted local businesses, services, offers, and community providers near you with KonnectG."
+        path="/map"
+      />
       <Footer />
     </div>
   );

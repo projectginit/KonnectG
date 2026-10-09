@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { CATEGORIES } from "../data/categories";
+import SEO from "../components/SEO";
 
 export default function Categories() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -580,7 +581,11 @@ export default function Categories() {
           </div>
         </section>
       </main>
-
+      <SEO
+        title="KonnectG | Discover Local Businesses & Services"
+        description="Discover trusted local businesses, services, offers, and community providers near you with KonnectG."
+        path="/categories"
+      />
       <Footer />
     </div>
   );

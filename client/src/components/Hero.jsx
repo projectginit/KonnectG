@@ -24,9 +24,8 @@ export default function Hero() {
         relative
         overflow-hidden
         bg-gradient-to-br
-        from-purple-950
-        via-purple-800
-        to-purple-600
+        from-purple-800
+        to-[#7B0040]
         px-5
         pb-36
         pt-16

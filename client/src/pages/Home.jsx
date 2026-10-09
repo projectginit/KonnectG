@@ -5,6 +5,7 @@ import Cards from "../components/Cards";
 // import NotifyForm from "../components/NotifyForm";
 import BusinessCTA from "../components/BusinessCTA";
 import Footer from "../components/layout/Footer";
+import SEO from "../components/SEO";
 
 export default function Home() {
   return (
@@ -47,7 +48,11 @@ export default function Home() {
           <BusinessCTA />
         </section>
       </main>
-
+      <SEO
+        title="KonnectG | Discover Local Businesses & Services"
+        description="Discover trusted local businesses, services, offers, and community providers near you with KonnectG."
+        path="/"
+      />
       <Footer />
     </div>
   );
