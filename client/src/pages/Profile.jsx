@@ -1,59 +1,175 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-
-/* ==========================================================
-                    TEMPORARY USER DATA
-========================================================== */
-/*
-  Temporary frontend data.
-
-  Later this will come from:
-
-  GET /api/users/me
-
-  and, after authentication:
-
-  GET /api/users/me/saved
-  GET /api/users/me/reviews
-*/
-
-const USER = {
-  name: "KonnectG User",
-  email: "user@example.com",
-  phone: "+91 9876543210",
-  joined: "June 2026",
-};
-
-/* ==========================================================
-                    SAVED BUSINESSES
-========================================================== */
-
-const SAVED_BUSINESSES = [
-  {
-    id: "1",
-    name: "Saffron Kitchen",
-    category: "Restaurants & Food",
-    area: "Matigara",
-    rating: 4.8,
-    verified: true,
-  },
-  {
-    id: "12",
-    name: "Ananya Beauty Studio",
-    category: "Beauty & Wellness",
-    area: "Medical",
-    rating: 4.9,
-    verified: true,
-  },
-];
-
-/* ==========================================================
-                        USER PROFILE
-========================================================== */
+import apiRequest from "../services/api";
 
 export default function Profile() {
+  const navigate = useNavigate();
+
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const token = localStorage.getItem("konnectg_token");
+
+        if (!token) {
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        const response = await apiRequest("/users/me");
+
+        if (!mounted) {
+          return;
+        }
+
+        setUser(response?.user || null);
+      } catch (err) {
+        console.error("Load profile error:", err);
+
+        if (!mounted) {
+          return;
+        }
+
+        if (err?.status === 401 || err?.status === 403) {
+          localStorage.removeItem("konnectg_token");
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        setError(err?.message || "Unable to load your profile.");
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate]);
+
+  const getInitial = () => {
+    if (!user?.name) {
+      return "?";
+    }
+
+    return user.name.trim().charAt(0).toUpperCase();
+  };
+
+  const formatJoinedDate = (date) => {
+    if (!date) {
+      return "Member";
+    }
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "Member";
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F7F6FA]">
+        <Navbar />
+
+        <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-6 sm:py-12">
+          <div className="flex min-h-[400px] items-center justify-center">
+            <div className="text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-purple-100 border-t-purple-700" />
+
+              <p className="mt-4 text-sm font-medium text-slate-500">
+                Loading your profile...
+              </p>
+            </div>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#F7F6FA]">
+        <Navbar />
+
+        <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-6 sm:py-12">
+          <div className="rounded-2xl border border-red-100 bg-white p-8 text-center shadow-sm">
+            <div className="text-3xl">⚠️</div>
+
+            <h1 className="mt-3 text-xl font-bold text-slate-800">
+              Unable to load profile
+            </h1>
+
+            <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+              {error}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-5 rounded-full bg-purple-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-800"
+            >
+              Try Again
+            </button>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#F7F6FA]">
+        <Navbar />
+
+        <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-6 sm:py-12">
+          <div className="rounded-2xl border border-[#EFEDF5] bg-white p-8 text-center shadow-sm">
+            <h1 className="text-xl font-bold text-slate-800">
+              Profile unavailable
+            </h1>
+
+            <p className="mt-2 text-sm text-slate-500">
+              We couldn't find your account information.
+            </p>
+
+            <Link
+              to="/login"
+              className="mt-5 inline-flex rounded-full bg-purple-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-800"
+            >
+              Go to Login
+            </Link>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F7F6FA]">
       {/* ==================================================
@@ -113,27 +229,44 @@ export default function Profile() {
                                 AVATAR
               ================================================== */}
 
-              <div
-                className="
-                  flex
-                  h-16
-                  w-16
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-white
-                  text-2xl
-                  font-bold
-                  text-purple-700
-                  shadow-lg
-                  sm:h-20
-                  sm:w-20
-                  sm:text-3xl
-                "
-              >
-                {USER.name.charAt(0)}
-              </div>
+              {user.profileImage ? (
+                <img
+                  src={user.profileImage}
+                  alt={`${user.name || "User"} profile`}
+                  className="
+                    h-16
+                    w-16
+                    shrink-0
+                    rounded-full
+                    object-cover
+                    shadow-lg
+                    sm:h-20
+                    sm:w-20
+                  "
+                />
+              ) : (
+                <div
+                  className="
+                    flex
+                    h-16
+                    w-16
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-white
+                    text-2xl
+                    font-bold
+                    text-purple-700
+                    shadow-lg
+                    sm:h-20
+                    sm:w-20
+                    sm:text-3xl
+                  "
+                >
+                  {getInitial()}
+                </div>
+              )}
 
               {/* ==================================================
                                 USER INFO
@@ -147,7 +280,7 @@ export default function Profile() {
                     sm:text-3xl
                   "
                 >
-                  {USER.name}
+                  {user.name}
                 </h1>
 
                 <p
@@ -157,7 +290,7 @@ export default function Profile() {
                     text-purple-100
                   "
                 >
-                  {USER.email}
+                  {user.email}
                 </p>
 
                 <p
@@ -167,7 +300,7 @@ export default function Profile() {
                     text-purple-200
                   "
                 >
-                  Member since {USER.joined}
+                  Member since {formatJoinedDate(user.createdAt)}
                 </p>
               </div>
             </div>
@@ -196,7 +329,7 @@ export default function Profile() {
         </section>
 
         {/* ==================================================
-                        CONTENT GRID
+                            CONTENT GRID
         ================================================== */}
 
         <div
@@ -267,93 +400,67 @@ export default function Profile() {
                     text-purple-700
                   "
                 >
-                  {SAVED_BUSINESSES.length}
+                  0
                 </span>
               </div>
 
-              <div className="mt-6 space-y-3">
-                {SAVED_BUSINESSES.map((business) => (
-                  <Link
-                    key={business.id}
-                    to={`/businesses/${business.id}`}
-                    className="
-                        flex
-                        flex-col
-                        gap-3
-                        rounded-xl
-                        border
-                        border-[#F0EEF6]
-                        p-4
-                        transition
-                        hover:border-purple-100
-                        hover:bg-purple-50/40
-                        sm:flex-row
-                        sm:items-center
-                        sm:justify-between
-                      "
-                  >
-                    <div>
-                      <div
-                        className="
-                            flex
-                            flex-wrap
-                            items-center
-                            gap-2
-                          "
-                      >
-                        <h3
-                          className="
-                              font-semibold
-                              text-slate-800
-                            "
-                        >
-                          {business.name}
-                        </h3>
+              <div
+                className="
+                  mt-6
+                  rounded-xl
+                  border
+                  border-dashed
+                  border-slate-200
+                  px-5
+                  py-10
+                  text-center
+                "
+              >
+                <div className="text-3xl">🔖</div>
 
-                        {business.verified && (
-                          <span
-                            className="
-                                rounded-full
-                                bg-emerald-50
-                                px-2
-                                py-0.5
-                                text-[11px]
-                                font-bold
-                                text-emerald-600
-                              "
-                          >
-                            ✓ Verified
-                          </span>
-                        )}
-                      </div>
+                <p
+                  className="
+                    mt-3
+                    text-sm
+                    font-semibold
+                    text-slate-700
+                  "
+                >
+                  No saved businesses yet
+                </p>
 
-                      <p
-                        className="
-                            mt-1
-                            text-sm
-                            text-slate-500
-                          "
-                      >
-                        {business.category}
-                        {" • "}
-                        {business.area}
-                      </p>
-                    </div>
+                <p
+                  className="
+                    mx-auto
+                    mt-1
+                    max-w-sm
+                    text-xs
+                    leading-5
+                    text-slate-500
+                  "
+                >
+                  Save your favorite local businesses and they&apos;ll appear
+                  here.
+                </p>
 
-                    <div
-                      className="
-                          flex
-                          items-center
-                          gap-1
-                          text-sm
-                          font-semibold
-                          text-amber-500
-                        "
-                    >
-                      ★ {business.rating}
-                    </div>
-                  </Link>
-                ))}
+                <Link
+                  to="/listings"
+                  className="
+                    mt-4
+                    inline-flex
+                    rounded-full
+                    bg-purple-50
+                    px-5
+                    py-2.5
+                    text-sm
+                    font-semibold
+                    text-purple-700
+                    transition
+                    hover:bg-purple-100
+                  "
+                >
+                  Browse Businesses
+                </Link>
               </div>
             </section>
 
@@ -482,6 +589,8 @@ export default function Profile() {
               </h2>
 
               <div className="mt-5 space-y-5">
+                {/* Name */}
+
                 <div>
                   <p
                     className="
@@ -502,9 +611,11 @@ export default function Profile() {
                       text-slate-700
                     "
                   >
-                    {USER.name}
+                    {user.name || "Not provided"}
                   </p>
                 </div>
+
+                {/* Email */}
 
                 <div>
                   <p
@@ -527,9 +638,11 @@ export default function Profile() {
                       text-slate-700
                     "
                   >
-                    {USER.email}
+                    {user.email || "Not provided"}
                   </p>
                 </div>
+
+                {/* Phone */}
 
                 <div>
                   <p
@@ -551,7 +664,34 @@ export default function Profile() {
                       text-slate-700
                     "
                   >
-                    {USER.phone}
+                    {user.phone || "Not provided"}
+                  </p>
+                </div>
+
+                {/* Role */}
+
+                <div>
+                  <p
+                    className="
+                      text-xs
+                      font-semibold
+                      uppercase
+                      tracking-wide
+                      text-slate-400
+                    "
+                  >
+                    Account Type
+                  </p>
+
+                  <p
+                    className="
+                      mt-1
+                      capitalize
+                      text-sm
+                      text-slate-700
+                    "
+                  >
+                    {user.role || "User"}
                   </p>
                 </div>
               </div>
