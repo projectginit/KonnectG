@@ -2,6 +2,8 @@ import express from "express";
 
 import authMiddleware from "../middleware/authMiddleware.js";
 import authorizeRoles from "../middleware/roleMiddleware.js";
+import upload from "../middleware/uploadMiddleware.js";
+import { uploadBusinessImages } from "../controllers/uploadController.js";
 
 import {
   createBusiness,
@@ -42,6 +44,14 @@ router.get(
   authMiddleware,
   authorizeRoles("admin", "owner"),
   getAdminBusinesses,
+);
+
+router.post(
+  "/upload",
+  authMiddleware,
+  authorizeRoles("merchant"),
+  upload.array("images", 6),
+  uploadBusinessImages,
 );
 
 // Get single business
