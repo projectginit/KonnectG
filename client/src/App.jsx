@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import SplashScreen from "./components/SplashScreen";
+import LegalModal from "./components/LegalModal";
 
 import Home from "./pages/Home";
 import Categories from "./pages/Categories";
@@ -43,6 +44,7 @@ import "./App.css";
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
+  const [showLegalModal, setShowLegalModal] = useState(false);
 
   /* ==========================================================
                         SPLASH SCREEN
@@ -51,6 +53,12 @@ export default function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
+
+      const hasAccepted = localStorage.getItem("konnectg_legal_consent");
+
+      if (hasAccepted !== "true") {
+        setShowLegalModal(true);
+      }
     }, 1800);
 
     return () => {
@@ -63,99 +71,104 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      {/* ======================================================
+    <>
+      <Routes>
+        {/* ======================================================
                             PUBLIC PAGES
       ====================================================== */}
 
-      <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home />} />
 
-      <Route path="/categories" element={<Categories />} />
+        <Route path="/categories" element={<Categories />} />
 
-      <Route path="/listings" element={<Listings />} />
+        <Route path="/listings" element={<Listings />} />
 
-      <Route path="/businesses/:businessId" element={<BusinessDetails />} />
+        <Route path="/businesses/:businessId" element={<BusinessDetails />} />
 
-      <Route path="/map" element={<MapPage />} />
+        <Route path="/map" element={<MapPage />} />
 
-      <Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<Profile />} />
 
-      <Route path="/merchant" element={<MerchantLayout />}>
-        <Route index element={<MerchantDashboard />} />
+        <Route path="/merchant" element={<MerchantLayout />}>
+          <Route index element={<MerchantDashboard />} />
 
-        <Route path="listings" element={<MerchantListings />} />
+          <Route path="listings" element={<MerchantListings />} />
 
-        <Route path="offers" element={<MerchantOffers />} />
+          <Route path="offers" element={<MerchantOffers />} />
 
-        <Route path="insights" element={<MerchantInsights />} />
+          <Route path="insights" element={<MerchantInsights />} />
 
-        <Route path="account" element={<MerchantAccount />} />
-      </Route>
+          <Route path="account" element={<MerchantAccount />} />
+        </Route>
 
-      {/* ======================================================
+        {/* ======================================================
                         AUTHENTICATION
       ====================================================== */}
 
-      <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login />} />
 
-      <Route path="/signup" element={<Signup />} />
+        <Route path="/signup" element={<Signup />} />
 
-      <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
-      {/* ======================================================
+        {/* ======================================================
                         ADMIN
 ====================================================== */}
 
-      <Route path="/admin" element={<Admin />}>
-        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="/admin" element={<Admin />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
 
-        <Route path="dashboard" element={<Overview />} />
+          <Route path="dashboard" element={<Overview />} />
 
-        <Route path="merchants" element={<Merchants />} />
+          <Route path="merchants" element={<Merchants />} />
 
-        <Route path="verification" element={<Verification />} />
+          <Route path="verification" element={<Verification />} />
 
-        <Route path="approval" element={<Approval />} />
+          <Route path="approval" element={<Approval />} />
 
-        <Route path="offers" element={<Offers />} />
+          <Route path="offers" element={<Offers />} />
 
-        <Route path="reviews" element={<Reviews />} />
+          <Route path="reviews" element={<Reviews />} />
 
-        <Route path="analytics" element={<Analytics />} />
+          <Route path="analytics" element={<Analytics />} />
 
-        <Route
-          path="owners"
-          element={
-            <OwnerRoute>
-              <OwnerManagement />
-            </OwnerRoute>
-          }
-        />
+          <Route
+            path="owners"
+            element={
+              <OwnerRoute>
+                <OwnerManagement />
+              </OwnerRoute>
+            }
+          />
 
-        <Route
-          path="users"
-          element={
-            <AdminRoute>
-              <UserManagement />
-            </AdminRoute>
-          }
-        />
+          <Route
+            path="users"
+            element={
+              <AdminRoute>
+                <UserManagement />
+              </AdminRoute>
+            }
+          />
 
-        <Route
-          path="profile"
-          element={
-            <AdminRoute>
-              <AdminProfile />
-            </AdminRoute>
-          }
-        />
-      </Route>
+          <Route
+            path="profile"
+            element={
+              <AdminRoute>
+                <AdminProfile />
+              </AdminRoute>
+            }
+          />
+        </Route>
 
-      {/* ======================================================
+        {/* ======================================================
                             404
       ====================================================== */}
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      {showLegalModal && (
+        <LegalModal onAccept={() => setShowLegalModal(false)} />
+      )}
+    </>
   );
 }
