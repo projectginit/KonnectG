@@ -153,7 +153,7 @@ export default function Profile() {
             </h1>
 
             <p className="mt-2 text-sm text-slate-500">
-              We couldn't find your account information.
+              We couldn&apos;t find your account information.
             </p>
 
             <Link
