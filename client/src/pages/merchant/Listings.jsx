@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import BusinessRegistrationModal from "../../components/merchant/BusinessRegistrationModal";
 import apiRequest from "../../services/api";
 
@@ -44,6 +46,8 @@ function getInitials(name = "") {
 }
 
 export default function Listings() {
+  const navigate = useNavigate();
+
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -80,6 +84,12 @@ export default function Listings() {
     }
 
     setShowRegistrationModal(false);
+  };
+
+  const handleBusinessClick = (businessId) => {
+    if (!businessId) return;
+
+    navigate(`/merchant/business/${businessId}`);
   };
 
   return (
@@ -232,19 +242,38 @@ export default function Listings() {
         {!loading && businesses.length > 0 && (
           <div className="merchant-listings-grid">
             {businesses.map((business) => (
-              <article key={business._id} className="merchant-listing-card">
-                {/* Logo */}
-
-                <div className="merchant-listing-logo">
+              <article
+                key={business._id}
+                className="merchant-listing-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleBusinessClick(business._id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleBusinessClick(business._id);
+                  }
+                }}
+              >
+                {/* Business Image */}
+                <div className="merchant-listing-image">
                   {business.logo ? (
-                    <img src={business.logo} alt={business.name} />
+                    <img
+                      src={business.logo}
+                      alt={`${business.name} business`}
+                    />
                   ) : (
-                    <span>{getInitials(business.name) || "B"}</span>
+                    <div className="merchant-listing-image-placeholder">
+                      <span>{getInitials(business.name) || "B"}</span>
+                    </div>
                   )}
+
+                  <span className={getStatusClass(business.approvalStatus)}>
+                    {business.approvalStatus || "pending"}
+                  </span>
                 </div>
 
                 {/* Content */}
-
                 <div className="merchant-listing-content">
                   <div className="merchant-listing-top">
                     <div className="merchant-listing-main">
@@ -256,16 +285,11 @@ export default function Listings() {
                           "Business"}
                       </p>
                     </div>
-
-                    <span className={getStatusClass(business.approvalStatus)}>
-                      {business.approvalStatus || "pending"}
-                    </span>
                   </div>
 
                   <div className="merchant-listing-details">
                     <div>
                       <span>📍</span>
-
                       <p>
                         {business.area}
                         {business.city ? `, ${business.city}` : ""}
@@ -274,7 +298,6 @@ export default function Listings() {
 
                     <div>
                       <span>📞</span>
-
                       <p>{business.phone || "No phone number"}</p>
                     </div>
                   </div>

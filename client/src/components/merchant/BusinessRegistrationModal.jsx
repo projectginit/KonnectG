@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import apiRequest from "../../services/api";
 
 const INITIAL_FORM = {
@@ -12,15 +13,43 @@ const INITIAL_FORM = {
   city: "Siliguri",
 };
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+];
+
 export default function BusinessRegistrationModal({ onClose, onSuccess }) {
   const [form, setForm] = useState(INITIAL_FORM);
+
   const [categories, setCategories] = useState([]);
 
   const [loadingCategories, setLoadingCategories] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
 
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const [error, setError] = useState("");
+
+  /*
+   * Stores the Cloudinary URL.
+   */
+  const [businessImage, setBusinessImage] = useState("");
+
+  /*
+   * Stores the temporary local preview.
+   */
+  const [imagePreview, setImagePreview] = useState("");
+
+  const fileInputRef = useRef(null);
+
+  /* ==========================================================
+                        LOAD CATEGORIES
+  ========================================================== */
 
   useEffect(() => {
     let mounted = true;
@@ -31,7 +60,9 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
 
         const response = await apiRequest("/categories");
 
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
 
         const categoryList = Array.isArray(response)
           ? response
@@ -43,7 +74,9 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
           categoryList.filter((category) => category.isActive !== false),
         );
       } catch (err) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
 
         setError(err?.message || "Unable to load business categories.");
       } finally {
@@ -60,9 +93,13 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
     };
   }, []);
 
+  /* ==========================================================
+                        ESCAPE KEY
+  ========================================================== */
+
   useEffect(() => {
     const handleEscape = (event) => {
-      if (event.key === "Escape" && !submitting) {
+      if (event.key === "Escape" && !submitting && !uploadingImage) {
         onClose();
       }
     };
@@ -72,7 +109,11 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose, submitting]);
+  }, [onClose, submitting, uploadingImage]);
+
+  /* ==========================================================
+                        FORM CHANGE
+  ========================================================== */
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -81,7 +122,124 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
       ...currentForm,
       [name]: value,
     }));
+
+    setError("");
   };
+
+  /* ==========================================================
+                    IMAGE VALIDATION
+  ========================================================== */
+
+  const validateImage = (file) => {
+    if (!file) {
+      return "Please select an image.";
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      return (
+        "Invalid image type. " +
+        "Only JPG, JPEG, PNG and WebP images are allowed."
+      );
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      return "Image must be smaller than 5 MB.";
+    }
+
+    return "";
+  };
+
+  /* ==========================================================
+                    IMAGE UPLOAD
+  ========================================================== */
+
+  const handleImageChange = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setError("");
+
+    const validationError = validateImage(file);
+
+    if (validationError) {
+      setError(validationError);
+
+      event.target.value = "";
+
+      return;
+    }
+
+    /*
+     * Show local preview immediately.
+     */
+    const previewUrl = URL.createObjectURL(file);
+
+    setImagePreview(previewUrl);
+
+    /*
+     * Remove previous Cloudinary image URL
+     * while the new image is uploading.
+     */
+    setBusinessImage("");
+
+    try {
+      setUploadingImage(true);
+
+      const formData = new FormData();
+
+      formData.append("image", file);
+
+      /*
+       * apiRequest must send FormData without
+       * manually setting Content-Type.
+       */
+      const response = await apiRequest("/businesses/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const uploadedUrl = response?.image?.url || response?.url || "";
+
+      if (!uploadedUrl) {
+        throw new Error("Image uploaded, but no image URL was returned.");
+      }
+
+      setBusinessImage(uploadedUrl);
+    } catch (err) {
+      console.error("Business image upload error:", err);
+
+      setBusinessImage("");
+
+      setError(err?.message || "Unable to upload business image.");
+
+      setImagePreview("");
+    } finally {
+      setUploadingImage(false);
+
+      event.target.value = "";
+    }
+  };
+
+  /* ==========================================================
+                        REMOVE IMAGE
+  ========================================================== */
+
+  const handleRemoveImage = () => {
+    setBusinessImage("");
+    setImagePreview("");
+    setError("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  /* ==========================================================
+                        SUBMIT
+  ========================================================== */
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -90,26 +248,42 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
 
     if (!form.name.trim()) {
       setError("Business name is required.");
+
       return;
     }
 
     if (!form.categoryRef) {
       setError("Please select a category.");
+
       return;
     }
 
     if (!form.phone.trim()) {
       setError("Phone number is required.");
+
       return;
     }
 
     if (!form.address.trim()) {
       setError("Address is required.");
+
       return;
     }
 
     if (!form.area.trim()) {
       setError("Area is required.");
+
+      return;
+    }
+
+    /*
+     * If the merchant selected an image,
+     * do not allow submission until Cloudinary
+     * upload has finished.
+     */
+    if (uploadingImage) {
+      setError("Please wait for the image upload to finish.");
+
       return;
     }
 
@@ -118,15 +292,37 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
 
       const response = await apiRequest("/businesses", {
         method: "POST",
+
         body: {
           name: form.name.trim(),
+
           description: form.description.trim(),
+
           categoryRef: form.categoryRef,
+
           phone: form.phone.trim(),
+
           email: form.email.trim(),
+
           address: form.address.trim(),
+
           area: form.area.trim(),
+
           city: form.city.trim() || "Siliguri",
+
+          /*
+           * Cloudinary image URL.
+           *
+           * The backend already supports
+           * the logo field.
+           */
+          logo: businessImage || "",
+
+          /*
+           * Keep images as an array for
+           * future gallery support.
+           */
+          images: businessImage ? [businessImage] : [],
         },
       });
 
@@ -134,6 +330,8 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
 
       onSuccess(createdBusiness);
     } catch (err) {
+      console.error("Business registration error:", err);
+
       setError(
         err?.message || "Unable to register your business. Please try again.",
       );
@@ -142,11 +340,19 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
     }
   };
 
+  /* ==========================================================
+                            UI
+  ========================================================== */
+
   return (
     <div
       className="merchant-modal-overlay"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !submitting) {
+        if (
+          event.target === event.currentTarget &&
+          !submitting &&
+          !uploadingImage
+        ) {
           onClose();
         }
       }}
@@ -157,9 +363,9 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
         aria-modal="true"
         aria-labelledby="merchant-registration-title"
       >
-        {/* =====================================================
-            HEADER
-        ===================================================== */}
+        {/* ====================================================
+                            HEADER
+        ==================================================== */}
 
         <div className="merchant-registration-header">
           <div>
@@ -175,7 +381,7 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            disabled={submitting}
+            disabled={submitting || uploadingImage}
             className="merchant-registration-close"
             aria-label="Close"
           >
@@ -183,14 +389,20 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
           </button>
         </div>
 
-        {/* =====================================================
-            FORM
-        ===================================================== */}
+        {/* ====================================================
+                            FORM
+        ==================================================== */}
 
         <form onSubmit={handleSubmit} className="merchant-registration-form">
-          {error && <div className="merchant-registration-error">{error}</div>}
+          {error && (
+            <div className="merchant-registration-error" role="alert">
+              {error}
+            </div>
+          )}
 
-          {/* Business Name */}
+          {/* ==================================================
+                        BUSINESS NAME
+          ================================================== */}
 
           <div className="merchant-form-field">
             <label htmlFor="business-name">
@@ -208,7 +420,9 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
             />
           </div>
 
-          {/* Category */}
+          {/* ==================================================
+                            CATEGORY
+          ================================================== */}
 
           <div className="merchant-form-field">
             <label htmlFor="business-category">
@@ -236,7 +450,82 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
             </select>
           </div>
 
-          {/* Description */}
+          {/* ==================================================
+                        BUSINESS IMAGE
+          ================================================== */}
+
+          <div className="merchant-form-field">
+            <label htmlFor="business-image">Business Image</label>
+
+            <div
+              className="merchant-business-image-upload"
+              onClick={() => {
+                if (!submitting && !uploadingImage) {
+                  fileInputRef.current?.click();
+                }
+              }}
+            >
+              {imagePreview ? (
+                <div className="merchant-business-image-preview">
+                  <img src={imagePreview} alt="Business preview" />
+
+                  {!uploadingImage && (
+                    <button
+                      type="button"
+                      className="merchant-business-image-remove"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleRemoveImage();
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="merchant-business-image-placeholder">
+                  <div className="merchant-business-image-icon">🖼️</div>
+
+                  <strong>Upload Business Image</strong>
+
+                  <span>JPG, PNG or WebP • Max 5 MB</span>
+                </div>
+              )}
+
+              {uploadingImage && (
+                <div className="merchant-business-image-uploading">
+                  Uploading image...
+                </div>
+              )}
+
+              {!uploadingImage && businessImage && (
+                <div className="merchant-business-image-success">
+                  ✓ Image uploaded successfully
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              id="business-image"
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={handleImageChange}
+              disabled={submitting || uploadingImage}
+              style={{
+                display: "none",
+              }}
+            />
+
+            <small className="merchant-business-image-help">
+              Add your business logo, storefront, or a representative business
+              photo.
+            </small>
+          </div>
+
+          {/* ==================================================
+                        DESCRIPTION
+          ================================================== */}
 
           <div className="merchant-form-field">
             <label htmlFor="business-description">Description</label>
@@ -252,7 +541,9 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
             />
           </div>
 
-          {/* Phone + Email */}
+          {/* ==================================================
+                        PHONE + EMAIL
+          ================================================== */}
 
           <div className="merchant-form-row">
             <div className="merchant-form-field">
@@ -286,7 +577,9 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Address */}
+          {/* ==================================================
+                            ADDRESS
+          ================================================== */}
 
           <div className="merchant-form-field">
             <label htmlFor="business-address">
@@ -304,7 +597,9 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
             />
           </div>
 
-          {/* Area + City */}
+          {/* ==================================================
+                            AREA + CITY
+          ================================================== */}
 
           <div className="merchant-form-row">
             <div className="merchant-form-field">
@@ -338,7 +633,9 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Approval notice */}
+          {/* ==================================================
+                        APPROVAL NOTICE
+          ================================================== */}
 
           <div className="merchant-registration-notice">
             <span>ℹ️</span>
@@ -349,13 +646,15 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
             </p>
           </div>
 
-          {/* Buttons */}
+          {/* ==================================================
+                            BUTTONS
+          ================================================== */}
 
           <div className="merchant-registration-footer">
             <button
               type="button"
               onClick={onClose}
-              disabled={submitting}
+              disabled={submitting || uploadingImage}
               className="merchant-registration-cancel"
             >
               Cancel
@@ -363,10 +662,14 @@ export default function BusinessRegistrationModal({ onClose, onSuccess }) {
 
             <button
               type="submit"
-              disabled={submitting || loadingCategories}
+              disabled={submitting || uploadingImage || loadingCategories}
               className="merchant-registration-submit"
             >
-              {submitting ? "Submitting..." : "Submit Business"}
+              {uploadingImage
+                ? "Uploading Image..."
+                : submitting
+                  ? "Submitting..."
+                  : "Submit Business"}
             </button>
           </div>
         </form>

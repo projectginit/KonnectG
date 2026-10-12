@@ -13,10 +13,22 @@ const apiRequest = async (endpoint, options = {}) => {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const requestOptions = {
     ...options,
     headers,
-  });
+  };
+
+  // Convert JavaScript objects to JSON.
+  // Don't stringify FormData, strings, or other already-formatted bodies.
+  if (
+    requestOptions.body &&
+    typeof requestOptions.body === "object" &&
+    !(requestOptions.body instanceof FormData)
+  ) {
+    requestOptions.body = JSON.stringify(requestOptions.body);
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, requestOptions);
 
   let data = {};
 
@@ -27,9 +39,7 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 
   if (!response.ok) {
-    const error = new Error(
-      data.message || "Something went wrong.",
-    );
+    const error = new Error(data.message || "Something went wrong.");
 
     error.status = response.status;
     error.data = data;

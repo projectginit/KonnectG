@@ -57,34 +57,7 @@ export default function MerchantLayout() {
           lg:block
         "
       >
-        {/* Merchant identity */}
-
-        <div className="mb-6 flex items-center gap-3 px-2">
-          <div
-            className="
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              bg-purple-700
-              font-bold
-              text-white
-            "
-          >
-            S
-          </div>
-
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-ink">
-              Saffron Kitchen
-            </p>
-
-            <p className="text-xs font-medium text-emerald-500">Verified ✓</p>
-          </div>
-        </div>
+        
 
         {/* Navigation */}
 

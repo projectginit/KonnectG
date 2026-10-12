@@ -1,101 +1,98 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import apiRequest from "../../services/api";
+import { Link, useNavigate } from "react-router-dom";
 
+import apiRequest from "../../services/api";
 import "./Merchant.css";
+
+/* ==========================================================
+   CONSTANTS
+========================================================== */
 
 const EMPTY_STATS = [
   {
     icon: "🏪",
-    label: "Total Listings",
-    value: "0",
+    label: "Total Businesses",
+    value: 0,
   },
   {
     icon: "✓",
     label: "Approved",
-    value: "0",
+    value: 0,
   },
   {
     icon: "⏳",
-    label: "Pending Approval",
-    value: "0",
+    label: "Pending",
+    value: 0,
   },
   {
-    icon: "🔵",
+    icon: "✦",
     label: "Verified",
-    value: "0",
+    value: 0,
   },
 ];
 
-function getInitials(name = "") {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join("");
-}
+/* ==========================================================
+   DASHBOARD
+========================================================== */
 
-function getStatusClass(status) {
-  switch (status) {
-    case "approved":
-      return "merchant-dashboard-status merchant-dashboard-status-approved";
+function Dashboard() {
+  /*
+   * IMPORTANT:
+   * Hooks must be inside the React component.
+   */
+  const navigate = useNavigate();
 
-    case "pending":
-      return "merchant-dashboard-status merchant-dashboard-status-pending";
-
-    case "rejected":
-      return "merchant-dashboard-status merchant-dashboard-status-rejected";
-
-    default:
-      return "merchant-dashboard-status";
-  }
-}
-
-function formatDate(date) {
-  if (!date) return "—";
-
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "—";
-  }
-
-  return parsedDate.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-export default function Dashboard() {
   const [businesses, setBusinesses] = useState([]);
+  const [merchantName, setMerchantName] = useState("Merchant");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  /* ========================================================
+     LOAD DASHBOARD DATA
+  ======================================================== */
 
   useEffect(() => {
     let mounted = true;
 
-    const loadBusinesses = async () => {
+    const loadDashboard = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const response = await apiRequest("/businesses/my");
+        /*
+         * Load current merchant profile.
+         */
+        const userResponse = await apiRequest("/users/me");
 
-        if (!mounted) return;
+        /*
+         * Load businesses belonging to the logged-in merchant.
+         */
+        const businessResponse = await apiRequest("/businesses/my");
 
-        const merchantBusinesses = Array.isArray(response?.businesses)
-          ? response.businesses
+        if (!mounted) {
+          return;
+        }
+
+        const user = userResponse?.user || {};
+        const merchantBusinesses = Array.isArray(
+          businessResponse?.businesses,
+        )
+          ? businessResponse.businesses
           : [];
 
+        setMerchantName(user.name || "Merchant");
         setBusinesses(merchantBusinesses);
       } catch (err) {
-        if (!mounted) return;
+        console.error("Load merchant dashboard error:", err);
+
+        if (!mounted) {
+          return;
+        }
 
         setError(
           err?.message ||
-            "Unable to load your business data. Please try again.",
+            "Unable to load your merchant dashboard.",
         );
       } finally {
         if (mounted) {
@@ -104,31 +101,55 @@ export default function Dashboard() {
       }
     };
 
-    loadBusinesses();
+    loadDashboard();
 
     return () => {
       mounted = false;
     };
   }, []);
 
+  /* ========================================================
+     RECENT BUSINESSES
+  ======================================================== */
+
+  const recentBusinesses = useMemo(() => {
+    return [...businesses]
+      .sort((a, b) => {
+        const dateA = new Date(a?.createdAt || 0).getTime();
+        const dateB = new Date(b?.createdAt || 0).getTime();
+
+        return dateB - dateA;
+      })
+      .slice(0, 5);
+  }, [businesses]);
+
+  /* ========================================================
+     STATISTICS
+  ======================================================== */
+
   const stats = useMemo(() => {
+    const total = businesses.length;
+
     const approved = businesses.filter(
-      (business) => business.approvalStatus === "approved",
+      (business) =>
+        business?.approvalStatus === "approved",
     ).length;
 
     const pending = businesses.filter(
-      (business) => business.approvalStatus === "pending",
+      (business) =>
+        business?.approvalStatus === "pending",
     ).length;
 
     const verified = businesses.filter(
-      (business) => business.verificationStatus === "verified",
+      (business) =>
+        business?.verificationStatus === "verified",
     ).length;
 
     return [
       {
         icon: "🏪",
-        label: "Total Listings",
-        value: businesses.length,
+        label: "Total Businesses",
+        value: total,
       },
       {
         icon: "✓",
@@ -137,50 +158,114 @@ export default function Dashboard() {
       },
       {
         icon: "⏳",
-        label: "Pending Approval",
+        label: "Pending",
         value: pending,
       },
       {
-        icon: "🔵",
+        icon: "✦",
         label: "Verified",
         value: verified,
       },
     ];
   }, [businesses]);
 
-  const recentBusinesses = useMemo(() => {
-    return [...businesses]
-      .sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0).getTime();
-        const dateB = new Date(b.createdAt || 0).getTime();
+  /* ========================================================
+     HELPERS
+  ======================================================== */
 
-        return dateB - dateA;
-      })
-      .slice(0, 5);
-  }, [businesses]);
+  const formatDate = (date) => {
+    if (!date) {
+      return "—";
+    }
 
-  const merchantName =
-    businesses[0]?.owner?.name || businesses[0]?.owner?.email || "Merchant";
+    const parsedDate = new Date(date);
 
-//   const initials = getInitials(merchantName) || "M";
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "—";
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const getInitials = (name) => {
+    if (!name) {
+      return "";
+    }
+
+    return name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("");
+  };
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case "approved":
+        return "merchant-dashboard-status-approved";
+
+      case "rejected":
+        return "merchant-dashboard-status-rejected";
+
+      case "pending":
+      default:
+        return "merchant-dashboard-status-pending";
+    }
+  };
+
+  /*
+   * Centralized card navigation.
+   *
+   * This ensures we only navigate when a valid
+   * MongoDB business _id exists.
+   */
+  const handleBusinessClick = (business) => {
+    if (!business?._id) {
+      console.error(
+        "Cannot open business: missing business _id.",
+        business,
+      );
+
+      return;
+    }
+
+    navigate(`/merchant/business/${business._id}`);
+  };
+
+  /* ========================================================
+     UI
+  ======================================================== */
 
   return (
     <div className="merchant-dashboard">
+
       {/* =====================================================
           HEADER
       ===================================================== */}
 
       <div className="merchant-dashboard-header">
+
         <div>
-          <p className="merchant-dashboard-eyebrow">Merchant Dashboard</p>
+
+          <p className="merchant-dashboard-eyebrow">
+            Merchant Dashboard
+          </p>
 
           <h1 className="merchant-dashboard-title">
-            Welcome back, {merchantName.split(" ")[0]}
+            Welcome back,{" "}
+            {merchantName?.split(" ")[0] || "Merchant"}
           </h1>
 
           <p className="merchant-dashboard-subtitle">
-            Manage your businesses and track your KonnectG presence.
+            Manage your businesses and track your KonnectG
+            presence.
           </p>
+
         </div>
 
         <Link
@@ -190,6 +275,7 @@ export default function Dashboard() {
           <span>＋</span>
           Add Business
         </Link>
+
       </div>
 
       {/* =====================================================
@@ -198,12 +284,17 @@ export default function Dashboard() {
 
       {error && (
         <div className="merchant-dashboard-alert">
+
           <div>
+
             <p className="merchant-dashboard-alert-title">
               Could not load dashboard
             </p>
 
-            <p className="merchant-dashboard-alert-text">{error}</p>
+            <p className="merchant-dashboard-alert-text">
+              {error}
+            </p>
+
           </div>
 
           <button
@@ -213,6 +304,7 @@ export default function Dashboard() {
           >
             Retry
           </button>
+
         </div>
       )}
 
@@ -221,19 +313,32 @@ export default function Dashboard() {
       ===================================================== */}
 
       <section className="merchant-dashboard-stats">
+
         {(loading ? EMPTY_STATS : stats).map((stat) => (
-          <div key={stat.label} className="merchant-dashboard-stat-card">
+          <div
+            key={stat.label}
+            className="merchant-dashboard-stat-card"
+          >
+
             <div className="merchant-dashboard-stat-top">
-              <span className="merchant-dashboard-stat-icon">{stat.icon}</span>
+
+              <span className="merchant-dashboard-stat-icon">
+                {stat.icon}
+              </span>
+
             </div>
 
             <p className="merchant-dashboard-stat-value">
               {loading ? "—" : stat.value}
             </p>
 
-            <p className="merchant-dashboard-stat-label">{stat.label}</p>
+            <p className="merchant-dashboard-stat-label">
+              {stat.label}
+            </p>
+
           </div>
         ))}
+
       </section>
 
       {/* =====================================================
@@ -241,73 +346,115 @@ export default function Dashboard() {
       ===================================================== */}
 
       <section className="merchant-dashboard-section">
+
         <div className="merchant-dashboard-section-header">
+
           <div>
-            <h2 className="merchant-dashboard-section-title">Quick Actions</h2>
+
+            <h2 className="merchant-dashboard-section-title">
+              Quick Actions
+            </h2>
 
             <p className="merchant-dashboard-section-subtitle">
               Manage your businesses quickly.
             </p>
+
           </div>
+
         </div>
 
         <div className="merchant-dashboard-actions">
+
           <Link
             to="/merchant/listings"
             className="merchant-dashboard-action-card"
           >
-            <span className="merchant-dashboard-action-icon">🏪</span>
+
+            <span className="merchant-dashboard-action-icon">
+              🏪
+            </span>
 
             <span>
               <strong>My Listings</strong>
-              <small>View and manage your businesses</small>
+              <small>
+                View and manage your businesses
+              </small>
             </span>
 
-            <span className="merchant-dashboard-action-arrow">→</span>
+            <span className="merchant-dashboard-action-arrow">
+              →
+            </span>
+
           </Link>
 
           <Link
             to="/merchant/offers"
             className="merchant-dashboard-action-card"
           >
-            <span className="merchant-dashboard-action-icon">🏷️</span>
+
+            <span className="merchant-dashboard-action-icon">
+              🏷️
+            </span>
 
             <span>
               <strong>Manage Offers</strong>
-              <small>Create and manage promotions</small>
+              <small>
+                Create and manage promotions
+              </small>
             </span>
 
-            <span className="merchant-dashboard-action-arrow">→</span>
+            <span className="merchant-dashboard-action-arrow">
+              →
+            </span>
+
           </Link>
 
           <Link
             to="/merchant/insights"
             className="merchant-dashboard-action-card"
           >
-            <span className="merchant-dashboard-action-icon">📊</span>
+
+            <span className="merchant-dashboard-action-icon">
+              📊
+            </span>
 
             <span>
               <strong>View Insights</strong>
-              <small>Track your business performance</small>
+              <small>
+                Track your business performance
+              </small>
             </span>
 
-            <span className="merchant-dashboard-action-arrow">→</span>
+            <span className="merchant-dashboard-action-arrow">
+              →
+            </span>
+
           </Link>
 
           <Link
             to="/merchant/account"
             className="merchant-dashboard-action-card"
           >
-            <span className="merchant-dashboard-action-icon">⚙️</span>
+
+            <span className="merchant-dashboard-action-icon">
+              ⚙️
+            </span>
 
             <span>
               <strong>Account Settings</strong>
-              <small>Manage your merchant account</small>
+              <small>
+                Manage your merchant account
+              </small>
             </span>
 
-            <span className="merchant-dashboard-action-arrow">→</span>
+            <span className="merchant-dashboard-action-arrow">
+              →
+            </span>
+
           </Link>
+
         </div>
+
       </section>
 
       {/* =====================================================
@@ -315,11 +462,17 @@ export default function Dashboard() {
       ===================================================== */}
 
       <div className="merchant-dashboard-grid">
-        {/* Recent Listings */}
+
+        {/* ===================================================
+            RECENT LISTINGS
+        =================================================== */}
 
         <section className="merchant-dashboard-panel">
+
           <div className="merchant-dashboard-panel-header">
+
             <div>
+
               <h2 className="merchant-dashboard-section-title">
                 Recent Listings
               </h2>
@@ -327,6 +480,7 @@ export default function Dashboard() {
               <p className="merchant-dashboard-section-subtitle">
                 Your recently added businesses.
               </p>
+
             </div>
 
             <Link
@@ -335,21 +489,30 @@ export default function Dashboard() {
             >
               View all →
             </Link>
+
           </div>
 
           {loading ? (
+
             <div className="merchant-dashboard-loading">
               Loading listings...
             </div>
-          ) : recentBusinesses.length === 0 ? (
-            <div className="merchant-dashboard-empty">
-              <div className="merchant-dashboard-empty-icon">🏪</div>
 
-              <h3>No businesses yet</h3>
+          ) : recentBusinesses.length === 0 ? (
+
+            <div className="merchant-dashboard-empty">
+
+              <div className="merchant-dashboard-empty-icon">
+                🏪
+              </div>
+
+              <h3>
+                No businesses yet
+              </h3>
 
               <p>
-                Add your first business to start building your presence on
-                KonnectG.
+                Add your first business to start building
+                your presence on KonnectG.
               </p>
 
               <Link
@@ -358,22 +521,62 @@ export default function Dashboard() {
               >
                 Add Your Business
               </Link>
+
             </div>
+
           ) : (
+
             <div className="merchant-dashboard-list">
+
               {recentBusinesses.map((business) => (
-                <div key={business._id} className="merchant-dashboard-business">
+
+                <div
+                  key={business._id}
+                  className="merchant-dashboard-business"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() =>
+                    handleBusinessClick(business)
+                  }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" ||
+                      event.key === " "
+                    ) {
+                      event.preventDefault();
+                      handleBusinessClick(business);
+                    }
+                  }}
+                  aria-label={`Open ${business.name || "business"}`}
+                >
+
+                  {/* BUSINESS LOGO */}
+
                   <div className="merchant-dashboard-business-logo">
+
                     {business.logo ? (
-                      <img src={business.logo} alt={business.name} />
+
+                      <img
+                        src={business.logo}
+                        alt={business.name || "Business"}
+                      />
+
                     ) : (
-                      <span>{getInitials(business.name) || "B"}</span>
+
+                      <span>
+                        {getInitials(business.name) || "B"}
+                      </span>
+
                     )}
+
                   </div>
 
+                  {/* BUSINESS INFORMATION */}
+
                   <div className="merchant-dashboard-business-info">
+
                     <p className="merchant-dashboard-business-name">
-                      {business.name}
+                      {business.name || "Unnamed Business"}
                     </p>
 
                     <p className="merchant-dashboard-business-meta">
@@ -385,90 +588,155 @@ export default function Dashboard() {
                     <p className="merchant-dashboard-business-date">
                       Added {formatDate(business.createdAt)}
                     </p>
+
                   </div>
 
+                  {/* STATUS */}
+
                   <div className="merchant-dashboard-business-status">
-                    <span className={getStatusClass(business.approvalStatus)}>
+
+                    <span
+                      className={getStatusClass(
+                        business.approvalStatus,
+                      )}
+                    >
                       {business.approvalStatus || "pending"}
                     </span>
 
-                    {business.verificationStatus === "verified" && (
+                    {business.verificationStatus ===
+                      "verified" && (
                       <span className="merchant-dashboard-verified">
                         ✓ Verified
                       </span>
                     )}
+
                   </div>
+
                 </div>
+
               ))}
+
             </div>
+
           )}
+
         </section>
 
-        {/* Performance */}
+        {/* ===================================================
+            PERFORMANCE
+        =================================================== */}
 
         <section className="merchant-dashboard-panel">
+
           <div className="merchant-dashboard-panel-header">
+
             <div>
-              <h2 className="merchant-dashboard-section-title">Performance</h2>
+
+              <h2 className="merchant-dashboard-section-title">
+                Performance
+              </h2>
 
               <p className="merchant-dashboard-section-subtitle">
                 Engagement metrics for your businesses.
               </p>
+
             </div>
+
           </div>
 
           <div className="merchant-dashboard-performance">
-            <div className="merchant-dashboard-performance-row">
-              <div>
-                <span className="merchant-dashboard-performance-icon">👁️</span>
 
-                <span>Profile Views</span>
+            <div className="merchant-dashboard-performance-row">
+
+              <div>
+
+                <span className="merchant-dashboard-performance-icon">
+                  👁️
+                </span>
+
+                <span>
+                  Profile Views
+                </span>
+
               </div>
 
               <strong>—</strong>
+
             </div>
 
             <div className="merchant-dashboard-performance-row">
-              <div>
-                <span className="merchant-dashboard-performance-icon">📞</span>
 
-                <span>Calls</span>
+              <div>
+
+                <span className="merchant-dashboard-performance-icon">
+                  📞
+                </span>
+
+                <span>
+                  Calls
+                </span>
+
               </div>
 
               <strong>—</strong>
+
             </div>
 
             <div className="merchant-dashboard-performance-row">
-              <div>
-                <span className="merchant-dashboard-performance-icon">💬</span>
 
-                <span>WhatsApp Clicks</span>
+              <div>
+
+                <span className="merchant-dashboard-performance-icon">
+                  💬
+                </span>
+
+                <span>
+                  WhatsApp Clicks
+                </span>
+
               </div>
 
               <strong>—</strong>
+
             </div>
 
             <div className="merchant-dashboard-performance-row">
-              <div>
-                <span className="merchant-dashboard-performance-icon">🏷️</span>
 
-                <span>Offer Redeems</span>
+              <div>
+
+                <span className="merchant-dashboard-performance-icon">
+                  🏷️
+                </span>
+
+                <span>
+                  Offer Redeems
+                </span>
+
               </div>
 
               <strong>—</strong>
+
             </div>
+
           </div>
 
           <div className="merchant-dashboard-performance-note">
+
             <span>ℹ️</span>
 
             <p>
-              Engagement analytics will appear here once tracking is enabled for
-              your listings.
+              Engagement analytics will appear here once
+              tracking is enabled for your listings.
             </p>
+
           </div>
+
         </section>
+
       </div>
+
     </div>
   );
 }
+
+export default Dashboard;

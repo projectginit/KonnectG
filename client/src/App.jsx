@@ -36,6 +36,7 @@ import MerchantListings from "./pages/merchant/Listings";
 import MerchantOffers from "./pages/merchant/Offers";
 import MerchantInsights from "./pages/merchant/Insights";
 import MerchantAccount from "./pages/merchant/Account";
+import MerchantBusinessDetails from "./pages/merchant/MerchantBusinessDetails";
 
 import OwnerRoute from "./components/auth/OwnerRoute";
 import AdminRoute from "./components/auth/AdminRoute";
@@ -99,6 +100,11 @@ export default function App() {
           <Route path="insights" element={<MerchantInsights />} />
 
           <Route path="account" element={<MerchantAccount />} />
+
+          <Route
+            path="/merchant/business/:businessId"
+            element={<MerchantBusinessDetails />}
+          />
         </Route>
 
         {/* ======================================================
